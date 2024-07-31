@@ -1,21 +1,82 @@
 import { StatusBar } from "expo-status-bar";
-import React, { useState } from "react";
-import { StyleSheet, Text, View, Switch, ScrollView } from "react-native";
-import MapView from "react-native-maps";
+import React, { useState, useEffect } from "react";
+import {
+  StyleSheet,
+  Text,
+  View,
+  Switch,
+  ScrollView,
+  Dimensions,
+  Button,
+  TouchableOpacity,
+  Share,
+} from "react-native";
+import MapView, { Marker } from "react-native-maps";
+import * as Location from "expo-location";
 
 export default function App() {
+  // switch
   const [isEnabled, setIsEnabled] = useState(false);
   const toggleSwitch = () => setIsEnabled((previousState) => !previousState);
+
+  // map marker
+
+  const [mapRegion, setMapRegion] = useState({
+    latitude: 41.0369,
+    longitude: 28.9858,
+    latitudeDelta: 0.0922,
+    longitudeDelta: 0.0421,
+  });
+
+  // map location
+
+  const userLocation = async () => {
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      setErrorMsg("Konum Erişimi Engellendi");
+    }
+    let location = await Location.getCurrentPositionAsync({
+      enableHighAccuracy: true,
+    });
+
+    setMapRegion({
+      latitude: location.coords.latitude,
+      longitude: location.coords.longitude,
+      latitudeDelta: 0.0922,
+      longitudeDelta: 0.0421,
+    });
+    console.log(location.coords.latitude, location.coords.longitude);
+
+    sharedLocation = console.log(userLocation);
+  };
+
+  useEffect(() => {
+    userLocation();
+  }, []);
+
+  // share
+
+  const onShare = async () => {
+    try {
+      const result = await Share.share({
+        message: "Current Location :)",
+      });
+    } catch (error) {
+      console.log(error.message);
+    }
+  };
 
   return (
     <ScrollView>
       <View style={styles.title}>
-        <Text style={{ textAlign: "right" }}> Share </Text>
+        <TouchableOpacity onPress={onShare}>
+          <Text style={{ textAlign: "right" }}>Share</Text>
+        </TouchableOpacity>
         <Text style={{ fontSize: 30, fontWeight: "bold" }}> Toggle </Text>
       </View>
 
       <View style={styles.container}>
-        <View style={styles.aktiflik}>
+        <View style={styles.status}>
           <Text>Aktiflik</Text>
 
           <Switch
@@ -28,8 +89,12 @@ export default function App() {
           />
         </View>
 
-        <View style={styles.mapcontainer}>
-          <MapView style={styles.map} />
+        <View style={styles.mapContainer}>
+          <MapView style={styles.map} region={mapRegion}>
+            <Marker coordinate={mapRegion} title="Marker" />
+          </MapView>
+
+          <Button title="Konumum" onPress={userLocation} />
         </View>
       </View>
     </ScrollView>
@@ -39,13 +104,17 @@ export default function App() {
 const styles = StyleSheet.create({
   title: {
     padding: 10,
-    paddingBottom: 15,
+    paddingVertical: 25,
+  },
+
+  button: {
+    width: 25,
   },
 
   container: {
     backgroundColor: "#f7f7f7",
   },
-  aktiflik: {
+  status: {
     backgroundColor: "#fff",
     flexDirection: "row",
     justifyContent: "space-between",
@@ -56,14 +125,15 @@ const styles = StyleSheet.create({
     width: "90%",
     margin: "auto",
   },
-  mapcontainer: {
+  mapContainer: {
     flex: 1,
     justifyContent: "center",
     alignItems: "center",
     height: 650,
+    width: "100%",
   },
   map: {
-    width: "80%",
-    height: "90%",
+    width: Dimensions.get("screen").width > 500 ? "70%" : "80%",
+    height: (Dimensions.get("screen").height = "90%"),
   },
 });
